@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>wuliu-service-debug</title>
+<link href="css/css_refactor.css" rel="stylesheet" type="text/css" media="all" />
+<link href="js/ligerUI/skins/Aqua/css/ligerui-all.css" rel="stylesheet" type="text/css" />
+<link href="js/ligerUI/skins/Silvery/css/style.css" rel="stylesheet" type="text/css" />
+<link href="js/ligerUI/skins/Silvery/css/layout.css" rel="stylesheet" type="text/css" />
+
+<script src="js/jquery.js" type="text/javascript"></script>
+<script src="js/jquery.cookie.js" type="text/javascript"></script>
+<script src="js/jquery.json-2.2.min.js" type="text/javascript"></script>
+
+<script src="js/ligerUI/js/core/base.js" type="text/javascript"></script>
+<script src="js/ligerUI/js/plugins/ligerTree.js" type="text/javascript"></script>
+<script src="js/ligerUI/js/plugins/ligerLayout.js" type="text/javascript"></script>
+
+<script src="js/json_data.js" type="text/javascript"></script>
+<script src="js/json_user.js" type="text/javascript"></script>
+<script src="js/json_driver.js" type="text/javascript"></script>
+<script src="js/json_common.js" type="text/javascript"></script>
+ 
+<style type="text/css">
+.buttons input{
+	margin-top:5px;
+}
+</style>
+
+<script type="text/javascript">
+
+function FormatJSON(oData, sIndent) {
+    if (arguments.length < 2) {
+        var sIndent = "";
+    }
+    var sIndentStyle = "    ";
+    var sDataType = RealTypeOf(oData);
+
+    // open object
+    if (sDataType == "array") {
+        if (oData.length == 0) {
+            return "[]";
+        }
+        var sHTML = "[";
+    } else {
+        var iCount = 0;
+        $.each(oData, function() {
+            iCount++;
+            return;
+        });
+        if (iCount == 0) { // object is empty
+            return "{}";
+        }
+        var sHTML = "{";
+    }
+
+    // loop through items
+    var iCount = 0;
+    $.each(oData, function(sKey, vValue) {
+        if (iCount > 0) {
+            sHTML += ",";
+        }
+        if (sDataType == "array") {
+            sHTML += ("\n" + sIndent + sIndentStyle);
+        } else {
+            sHTML += ("\n" + sIndent + sIndentStyle + "\"" + sKey + "\"" + ": ");
+        }
+
+        // display relevant data type
+        switch (RealTypeOf(vValue)) {
+            case "array":
+            case "object":
+                sHTML += FormatJSON(vValue, (sIndent + sIndentStyle));
+                break;
+            case "boolean":
+            case "number":
+                sHTML += vValue.toString();
+                break;
+            case "null":
+                sHTML += "null";
+                break;
+            case "string":
+                sHTML += ("\"" + vValue + "\"");
+                break;
+            default:
+                sHTML += ("TYPEOF: " + typeof(vValue));
+        }
+
+        // loop
+        iCount++;
+    });
+
+    // close object
+    if (sDataType == "array") {
+        sHTML += ("\n" + sIndent + "]");
+    } else {
+        sHTML += ("\n" + sIndent + "}");
+    }
+
+    // return
+    return sHTML;
+}
+function RealTypeOf(v) {
+  if (typeof(v) == "object") {
+    if (v === null) return "null";
+    if (v.constructor == (new Array).constructor) return "array";
+    if (v.constructor == (new Date).constructor) return "date";
+    if (v.constructor == (new RegExp).constructor) return "regex";
+    return "object";
+  }
+  return typeof(v);
+}
+
+function SortObject(oData) {
+    var oNewData = {};
+    var aSortArray = [];
+
+    // sort keys
+    $.each(oData, function(sKey) {
+        aSortArray.push(sKey);
+    });
+    aSortArray.sort(SortLowerCase);
+
+    // create new data object
+    $.each(aSortArray, function(i) {
+        if (RealTypeOf(oData[(aSortArray[i])]) == "object" ) {
+            oData[(aSortArray[i])] = SortObject(oData[(aSortArray[i])]);
+        }
+        oNewData[(aSortArray[i])] = oData[(aSortArray[i])];
+    });
+
+    return oNewData;
+
+    function SortLowerCase(a,b) {
+        a = a.toLowerCase();
+        b = b.toLowerCase();
+        return ((a < b) ? -1 : ((a > b) ? 1 : 0));
+    }
+}
+
+
+
+$(function(){
+	$("#layout").ligerLayout({ leftWidth: 200 ,InWindow:true});
+	$("#form_div").ligerLayout({topHeight:350});
+	
+	var tree = $("#tree").ligerTree({
+		data: treeData,
+		checkbox: false,
+		onClick: function(node){
+			//log(node)
+			var nodedata = node.data;
+			if(nodedata.nodeType == "input"){
+				var str = $.toJSON(nodedata.data.json);
+				$("#txt_input").val(str);
+				$("#txt_action").val(nodedata.data.action);
+			}else if(nodedata.nodeType == "output"){
+				var str = $.toJSON(nodedata.data);
+				//$("#sample_output").val(str);
+				$("#frm1").contents().find("body").text(str);
+			}
+		}
+	});
+	tree.collapseAll();
+	$("#btnFormatLeftInput").click(function(){
+		var str = $("#txt_input").val();
+		if(!str)return;
+		var formatted = FormatJSON($.evalJSON(str));
+		$("#txt_input").val(formatted);
+	});
+	$("#btnFormatRight").click(function(){
+		var str = $("#txt_record").val();
+		if(!str)return;
+		var formatted = FormatJSON($.evalJSON(str));
+		$("#txt_record").val(formatted);
+	});
+	$("#btnFormatOutput").click(function(){
+		var str = $("#frm1").contents().find("body").text();
+		if(!str)return;
+		var formatted = FormatJSON($.evalJSON(str));
+		formatted = "<pre>" + formatted + "</pre>";
+		$("#frm1").contents().find("body").html(formatted);
+	});
+	$("#form1").submit(function(){
+		
+	});
+});
+</script>
+
+</head>
+<body scroll="no">
+<div id="layout">
+	<div  position="left">
+	    <div class="treeContainer">
+		    <ul id="tree">
+			</ul>
+	    </div>
+	</div>
+    <div position="center" id="form_div" title="输入">
+    	<div position="top">
+		    <form action="../user" target="frm1" method="post" id="form1">
+	    		<table>
+	    			<tr>
+	    				<td>
+			                <textarea id="txt_input" name="json" style="width:700px;height:300px;"></textarea>
+				        </td>
+				        <td width="30" class="buttons">
+			                <input type="submit" value="发出请求" class="button3" />
+			                <input type="button" id="btnFormatLeftInput" value="格式化左边" class="button3" />
+			                <input type="button" id="btnFormatRight" value="格式化右边" class="button3" />
+			                <input type="button" id="btnFormatOutput" value="格式化输出" class="button3" />
+				        </td>
+				        <td>
+					        <div title="token" style="margin:3px;">
+					        	<label for="chk_modify_ticket">token</label>
+					        	<input type="text" class="text w5" id="txt_ticket" name="token"/>
+					        </div>
+					        <div title="action" style="margin:3px;">
+					        	<label for="txt_action">action</label>
+					        	<input type="text" class="text w5" id="txt_action" name="action"/>
+					        </div>
+					        <textarea style="width:500px;height:300px;" id="txt_record"></textarea>
+				        </td>
+				    </tr>
+			</table>
+			</form>
+    	</div>
+    	<div position="center" title="输出">
+            <table>
+            	<tr>
+            		<td>
+            			<iframe name="frm1" style="width:900px;height:300px;" id="frm1"></iframe>
+            		</td>
+            		<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            		<!--
+            		<td>
+            		样例输出
+            		<textarea style="width:500px;height:300px;" id="sample_output"></textarea>
+            		</td>-->
+            	</tr>
+            </table>
+    	</div>
+           <!--<iframe src="device_info_mgr_detail.html?devId=IF_TASK_DC1&devName=%E5%A4%A9%E7%BA%BF%E8%BF%9C%E7%A8%8B%E6%93%8D%E4%BD%9C%E8%AE%A1%E7%AE%97%E6%9C%BA" name="frm_device_info" id="frame" width="100%" height="100%" frameborder="0" scrolling="no" style="overflow: hidden;"></iframe>-->
+     </div>
+</div>
+</body>
+</html>

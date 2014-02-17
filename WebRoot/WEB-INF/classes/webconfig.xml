@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+        <comment>web中的各种常量配置</comment>
+        <entry key="basepath"></entry>
+        <entry key="jspath">/js</entry>
+        <entry key="csspath">/css</entry>
+        <entry key="imgpath">/images</entry>
+</properties>
